@@ -1,0 +1,13 @@
+# ZIM data (wikipedia_en_100.zim is a 333 MB test subset)
+*.zim
+# ...but commit the wikipedia.zim symlink (40-byte pointer to /mnt/shared/wiki_zim/, machine-specific layout)
+!wikipedia.zim
+
+# runtime
+run.pid
+server.log
+__pycache__/
+*.pyc
+
+# refresh_zim.py keeps one .bak of the previous ZIM
+*.bak

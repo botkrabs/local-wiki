@@ -1,0 +1,31 @@
+{ "id": "get-01", "kind": "get", "args": {"title": "American bison"}, "check": {"mode": "contains", "value": "Bison bison"} }
+{ "id": "get-02", "kind": "get", "args": {"title": "Dying Light"}, "check": {"mode": "contains", "value": "Kyle Crane"} }
+{ "id": "get-03", "kind": "get", "args": {"title": "Photosynthesis"}, "check": {"mode": "contains", "value": "chloroplast"} }
+{ "id": "get-04", "kind": "get", "args": {"title": "Transistor"}, "check": {"mode": "contains", "value": "semiconductor"} }
+{ "id": "get-05", "kind": "get", "args": {"title": "Marie Curie"}, "check": {"mode": "contains", "value": "radioactivit"} }
+{ "id": "get-06", "kind": "get", "args": {"title": "Monty Python"}, "check": {"mode": "contains", "value": "Flying Circus"} }
+{ "id": "get-07", "kind": "get", "args": {"title": "English language"}, "check": {"mode": "marker", "value": "truncated|long article"} }
+{ "id": "get-08", "kind": "redirect", "args": {"title": "American Buffalo"}, "check": {"mode": "contains", "value": "Bison bison"} }
+{ "id": "get-09", "kind": "redirect", "args": {"title": "1992 Super Bowl"}, "check": {"mode": "contains", "value": "Super Bowl XXVI"} }
+{ "id": "get-10", "kind": "get", "args": {"title": "zzzqqqnonexistentterm123"}, "check": {"mode": "startswith", "value": "Article not found"} }
+{ "id": "sec-01", "kind": "get", "args": {"title": "Dying Light", "section": "Reception"}, "check": {"mode": "contains", "value": "Metacritic"} }
+{ "id": "sec-02", "kind": "get", "args": {"title": "Dying Light", "section": "reception"}, "check": {"mode": "contains", "value": "Metacritic"} }
+{ "id": "sec-03", "kind": "get", "args": {"title": "American bison", "section": "Population bottleneck and near extinction"}, "check": {"mode": "contains", "value": "founding population"} }
+{ "id": "sec-04", "kind": "get", "args": {"title": "Dying Light", "section": "Sales"}, "check": {"mode": "contains", "value": "1.2"} }
+{ "id": "sec-05", "kind": "get", "args": {"title": "Dying Light", "section": "  development  "}, "check": {"mode": "contains", "value": "Dead Island"} }
+{ "id": "sec-06", "kind": "get", "args": {"title": "Dying Light", "section": "TotallyNotASection"}, "check": {"mode": "lists_sections", "value": "Reception"} }
+{ "id": "srch-01", "kind": "search", "args": {"query": "zombie parkour game day night cycle", "limit": 5}, "check": {"mode": "topn", "value": 2, "title": "Dying Light"} }
+{ "id": "srch-02", "kind": "search", "args": {"query": "bison population bottleneck genetic diversity", "limit": 5}, "check": {"mode": "topn", "value": 1, "title": "Population bottleneck"} }
+{ "id": "srch-03", "kind": "search", "args": {"query": "quantum no-cloning theorem entanglement", "limit": 5}, "check": {"mode": "topn", "value": 1, "title": "No-cloning theorem"} }
+{ "id": "srch-04", "kind": "search", "args": {"query": "largest mammal in North America", "limit": 5}, "check": {"mode": "topn_any", "value": 5, "titles": ["List of largest mammals", "American bison"]} }
+{ "id": "srch-05", "kind": "search", "args": {"query": "Chernobyl reactor accident 1986", "limit": 5}, "check": {"mode": "topn", "value": 5, "title": "Chernobyl disaster", "note": "occurrence-ranking weakness: comparison/investigation articles rank above the main article (same class as srch-08)"} }
+{ "id": "srch-06", "kind": "search", "args": {"query": "Royal Canadian Mounted Police", "limit": 5}, "check": {"mode": "topn", "value": 1, "title": "Royal Canadian Mounted Police"} }
+{ "id": "srch-09", "kind": "search", "args": {"query": "Inter Tribal Bison Council", "limit": 5}, "check": {"mode": "contains", "value": "Fort Peck", "note": "no article by that title exists — mention-based hits are the correct behavior (existence check)" } }
+{ "id": "srch-10", "kind": "search", "args": {"query": "hungry jacks", "limit": 5}, "check": {"mode": "topn", "value": 1, "title": "Hungry Jack's"} }
+{ "id": "srch-07", "kind": "search", "args": {"query": "zzzqqqxyznonexistentterm", "limit": 5}, "check": {"mode": "startswith", "value": "No articles matched"} }
+{ "id": "srch-08", "kind": "search", "args": {"query": "United States tree", "limit": 5}, "check": {"mode": "topn_any", "value": 5, "titles": ["Christmas tree production in the United States", "National Christmas Tree (United States)", "Joshua Tree, California"], "note": "known libzim fulltext weakness (occurrence ranking); informational, expected per original author's findings"} }
+{ "id": "nf-01", "kind": "get", "args": {"title": "Largest mammal in North America"}, "check": {"mode": "notfound_contains", "value": "List of largest mammals"} }
+{ "id": "nf-02", "kind": "get", "args": {"title": "Albert Einstein parents"}, "check": {"mode": "notfound_contains", "value": "Einstein"} }
+{ "id": "lead-01", "kind": "get", "args": {"title": "English language"}, "check": {"mode": "contains", "value": "showing the lead only"}, "note": "lead mode: long article default returns lead + section list, not full body" }
+{ "id": "lead-02", "kind": "get", "args": {"title": "English language", "full": true}, "check": {"mode": "contains", "value": "West Germanic"}, "note": "full=True bypasses lead mode and returns the whole body" }
+{ "id": "lead-03", "kind": "get", "args": {"title": "Bexley, New South Wales"}, "check": {"mode": "not_contains", "value": "showing the lead only"}, "note": "short article (3.8k chars) stays full text, no lead marker" }
