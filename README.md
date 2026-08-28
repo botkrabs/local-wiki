@@ -86,6 +86,41 @@ For pi users, the companion package
 pieces — footer extensions + the `local-search` routing skill — that pair
 with this server.
 
+## Protocol (wire format)
+
+MCP spec **2025-03-26** (what the installed `mcp` Python SDK speaks), on the
+**stateless streamable-HTTP** transport, JSON-RPC 2.0 over `POST /mcp`:
+
+- **No session required.** `stateless_http=True` — any request can arrive on
+  its own: `tools/call` works with no prior `initialize` (verified over the
+  wire); `Mcp-Session-Id` is never minted.
+- **Request headers**: `Content-Type: application/json` plus
+  `Accept: application/json, text/event-stream` — both accept-types are
+  mandatory, a JSON-only Accept gets a `-32600 Not Acceptable` error.
+- **Responses**: `text/event-stream` (SSE frames: `event: message`,
+  `data: {jsonrpc ...}`). `GET /mcp` opens an SSE channel (200).
+- **CORS**: `Access-Control-Allow-Origin: *` since 0.1.1, so browser-based MCP
+  clients can connect cross-origin.
+- **Spec note**: MCP **2026-07-28** (released 2026-07-28) made stateless the
+  core of the protocol — `initialize`/`Mcp-Session-Id` retired, requests
+  self-describing via `_meta`, `Mcp-Method`/`Mcp-Name` routing headers. This
+  server already behaves stateless, so upgrading is a `mcp` SDK bump, not an
+  architectural change.
+
+Minimal client call (curl, no handshake):
+```bash
+curl -s -X POST http://127.0.0.1:3211/mcp \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json, text/event-stream' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/call",
+       "params":{"name":"search","arguments":{"query":"mangonel"}}}'
+```
+
+Typical client config shape (client-specific, URL + streamable-HTTP transport):
+```json
+{ "url": "http://127.0.0.1:3211/mcp", "transport": "streamableHttp" }
+```
+
 ## Files
 
 | Path | Purpose |
