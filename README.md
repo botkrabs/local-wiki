@@ -14,6 +14,10 @@ as a ZIM file and exposes it through two MCP tools
 network round-trip. The snapshot is from June 2026; it only gets newer when
 I run the refresh script by hand.
 
+Since 0.1.0 (2026-08-28) it also serves the **full Chinese Wikipedia**
+(13.7 GB, `wikipedia_zh_all_nopic_2026-07.zim`) behind the same two tools via
+`lang="zh"` — auto-detected from `/mnt/shared/wiki_zim/`, no config needed.
+
 Initial word search concept was inspired by [gbkorr/ratsearch](https://github.com/gbkorr/ratsearch).
 
 ### A word on size
@@ -40,16 +44,22 @@ once, and every article exists.
 
 ## Tools
 
-- `get(title, section="", full=False)` — exact title → article text. Long
+- `get(title, section="", full=False, lang="en")` — exact title → article text. Long
   articles (text > `LOCAL_WIKI_LEAD_MAX`, default 8000) return **lead mode** by
   default: the intro up to the first h2 + a section list + a pointer (~1.5 KB
   vs ~9–25 KB). `section="Reception"` fetches one h2/h3 section
   (case/space-insensitive); `full=True` returns the whole article (oversized
   ones get a `[truncated: …]` marker); unknown title → related titles, unknown
   section → section list. Short articles (< 8 KB) always come back whole.
-- `search(query, limit=8)` — phrase → ranked titles + ~220-char snippets
-  (libzim fulltext + suggestion fallback). Titles containing the whole query are
-  hoisted to the top. Empty result → "No articles matched …".
+- `search(query, limit=8, lang="en")` — phrase → ranked titles + ~220-char snippets
+  (libzim fulltext, FTS-first with suggestion fallback). Titles containing the whole
+  query are hoisted to the top. Empty result → "No articles matched …".
+- `lang="zh"` (either tool) — the Chinese Wikipedia archive. Separate index,
+  no cross-lingual: Chinese queries work best; English queries hit only when a
+  zh article contains that English string (original titles/aliases). On a zh
+  title miss, related candidates come from a per-gram merge (libzim 9.x cannot
+  express OR — see `server.py:_cjk_loose`); the list can be noisy, pick the
+  semantically right one.
 
 ## Clients & configs
 
@@ -61,6 +71,9 @@ Any MCP client works. Two transports, both standard:
 - **stateless streamable HTTP** — one long-running server, any client can
   connect: start it with `LOCAL_WIKI_HTTP_PORT=3211`, then point the client
   at `http://127.0.0.1:3211/mcp` (or the machine's address, for other hosts).
+  The server sends CORS headers (0.1.1), so **browser-based MCP clients work
+  too** — e.g. the llama.cpp web UI's MCP server config (`http://127.0.0.1:3211/mcp`,
+  transport `streamable_http`).
 
 `LOCAL_WIKI_HTTP_PORT` set = HTTP mode (listens on the port); unset = stdio.
 
@@ -89,8 +102,10 @@ with this server.
 
 ## Env vars (server.py)
 
-`LOCAL_WIKI_ZIM` (path; default `./wikipedia.zim`) · `LOCAL_WIKI_MAX_CHARS`
-(65535) · `LOCAL_WIKI_MAX_TITLES` (20) · `LOCAL_WIKI_LEAD_MAX` (8000 — lead-mode
+`LOCAL_WIKI_ZIM` (path; default `./wikipedia.zim`) · `LOCAL_WIKI_ZIM_ZH`
+(optional; default = auto-detect newest `wikipedia_zh_all_nopic_*.zim` in
+`/mnt/shared/wiki_zim/`) · `LOCAL_WIKI_MAX_CHARS` (65535) ·
+`LOCAL_WIKI_MAX_TITLES` (20) · `LOCAL_WIKI_LEAD_MAX` (8000 — lead-mode
 threshold) · `LOCAL_WIKI_HTTP_PORT` (HTTP mode).
 
 ## Operations
@@ -163,3 +178,9 @@ on disk). First read after a swap is slow (lazy index build).
 - 2026-08-27: built: `get` (lead/section/full), `search` with normalized
   title hoist, truncation footers, the `_convert()` poisoning fix,
   `refresh_zim.py`, and the 31-case eval suite.
+- 2026-08-28 (0.1.0): FTS-first related-articles path; the FTS "outage" fixed
+  (`libzim.Query(str)` silently builds an empty query — `_query()` helper);
+  Chinese Wikipedia (`lang="zh"`, auto-detected); CJK miss-path per-gram merge
+  (libzim 9.x drops `FLAG_DEFAULT` — OR/AND/phrase syntax is dead); first git
+  tag. Full story: `INCIDENT_2026-08-28.md`.
+- 2026-08-28 (0.1.1): CORS middleware so browser-based MCP clients can connect.
