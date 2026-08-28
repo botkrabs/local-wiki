@@ -4,8 +4,8 @@
 Deterministic tool-level checks (no LLM): loads eval_set.jsonl and calls the
 `get` / `search` functions directly, scoring each against its `check`.
 
-Run:  python3 run_eval.py [--set eval_set.jsonl]
-      (with the interpreter that has libzim — it loads server.py in-process)
+Run:  python3 eval/run_eval.py [--set eval/eval_set.jsonl]   (from the repo root,
+      with the interpreter that has libzim — it loads server.py in-process)
 
 Tier-2 (model-level: does the LLM route to the right tool / read the right
 section) is deliberately NOT here — it needs the agent in the loop and is
@@ -22,10 +22,11 @@ import sys
 import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(HERE)
 
 
 def load_server():
-    spec = importlib.util.spec_from_file_location("srv", os.path.join(HERE, "server.py"))
+    spec = importlib.util.spec_from_file_location("srv", os.path.join(ROOT, "server.py"))
     srv = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(srv)
     srv.archive()  # warm the ZIM once

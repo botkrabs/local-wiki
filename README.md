@@ -158,7 +158,7 @@ Typical client config shape (client-specific, URL + streamable-HTTP transport):
 |---|---|
 | `server.py` | the MCP server (needs system python 3.12: libzim, mcp, html2text, uvicorn) |
 | `wikipedia.zim` | relative symlink → `wiki_zim/wikipedia_nopic.zim` (52.7 GB on this box; `wiki_zim/` itself is a symlink to `/mnt/shared/wiki_zim/`) |
-| `run_eval.py` + `eval_set.jsonl` | 31-case regression suite (~5 s) |
+| `eval/` (`run_eval.py` + `eval_set.jsonl`) | 31-case regression suite (~5 s) |
 | `run.pid` | pid of the HTTP server (see gotcha #2) |
 | `~/.bashrc` (bottom block) | autostart: if `:3211` not listening, start the server |
 | `/tmp/local-wiki-mcp.log` | server log (HTTP instance) |
@@ -196,7 +196,7 @@ curl -s -X POST http://127.0.0.1:3211/mcp -H 'Content-Type: application/json' \
 **Regression suite:**
 ```bash
 cd ~/.openclaw/workspace/local_wiki && \
-  LOCAL_WIKI_ZIM=$PWD/wikipedia.zim /usr/bin/python3 run_eval.py
+  LOCAL_WIKI_ZIM=$PWD/wikipedia.zim /usr/bin/python3 eval/run_eval.py
 ```
 Expect `28 passed, 0 failed, 3 informational`. Non-zero exit = regression. The
 3 `note`-marked cases are known libzim ranking limits — informational by design.
