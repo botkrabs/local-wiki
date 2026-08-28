@@ -7,7 +7,8 @@ its own.
 
 Deps: libzim, mcp, html2text, uvicorn (pip --user --break-system-packages)
 Env:
-  LOCAL_WIKI_ZIM      path to the .zim archive
+  LOCAL_WIKI_ZIM      path to the .zim archive (English, lang="en")
+  LOCAL_WIKI_ZIM_ZH   optional: path to the Chinese .zim archive (lang="zh")
   LOCAL_WIKI_MAX_CHARS cap for article text (default 65535, like the original)
   LOCAL_WIKI_MAX_TITLES max related titles returned (default 20)
   LOCAL_WIKI_HTTP_PORT if set, run as stateless streamable-HTTP MCP on
@@ -17,6 +18,7 @@ Env:
 import os
 import re
 
+import glob
 import html2text
 import libzim
 from mcp.server.mcpserver import MCPServer
@@ -24,6 +26,16 @@ from mcp.server.mcpserver import MCPServer
 ZIM_PATH = os.environ.get(
     "LOCAL_WIKI_ZIM", os.path.join(os.path.dirname(os.path.abspath(__file__)), "wikipedia.zim")
 )
+# zh archive: env wins; otherwise auto-detect the newest full zh nopic zim
+# (so stdio instances without the env var still get Chinese).
+ZH_PATH = os.environ.get("LOCAL_WIKI_ZIM_ZH", "")
+if not ZH_PATH:
+    _cands = sorted(glob.glob("/mnt/shared/wiki_zim/wikipedia_zh_all_nopic_*.zim"))
+    if _cands:
+        ZH_PATH = _cands[-1]
+_ZIM_PATHS = {"en": ZIM_PATH}
+if ZH_PATH:
+    _ZIM_PATHS["zh"] = ZH_PATH
 MAX_CHARS = int(os.environ.get("LOCAL_WIKI_MAX_CHARS", "65535"))
 MAX_TITLES = int(os.environ.get("LOCAL_WIKI_MAX_TITLES", "20"))
 # articles longer than this return their lead (intro) by default; pass
@@ -32,19 +44,21 @@ LEAD_MAX = int(os.environ.get("LOCAL_WIKI_LEAD_MAX", "8000"))
 
 mcp = MCPServer("local_wiki")
 
-_archive = None
-_sugg = None
-_ft = None
+_ARCHS = {}  # lang -> {"archive":..., "sugg":..., "ft":...} (lazily opened)
 
 
-def archive():
-    global _archive, _sugg, _ft
-    if _archive is None:
-        _archive = libzim.reader.Archive(ZIM_PATH)
-        _sugg = libzim.suggestion.SuggestionSearcher(_archive)
-        if _archive.has_fulltext_index:
-            _ft = libzim.search.Searcher(_archive)
-    return _archive
+def archive(lang="en"):
+    """Open (once) and return the Archive for `lang` ('en' or 'zh')."""
+    if lang not in _ZIM_PATHS:
+        raise ValueError(f"unknown wiki lang: {lang!r} (available: {sorted(_ZIM_PATHS)})")
+    if lang not in _ARCHS:
+        a = libzim.reader.Archive(_ZIM_PATHS[lang])
+        _ARCHS[lang] = {
+            "archive": a,
+            "sugg": libzim.suggestion.SuggestionSearcher(a),
+            "ft": libzim.search.Searcher(a) if a.has_fulltext_index else None,
+        }
+    return _ARCHS[lang]["archive"]
 
 
 _HEADING_RE = re.compile(r"<h([23])[^>]*>(.*?)</h\1>", re.S)
@@ -80,8 +94,8 @@ def _cap(text: str):
     return text
 
 
-def _article_entry(title: str):
-    a = archive()
+def _article_entry(title: str, lang: str = "en"):
+    a = archive(lang)
     norm = title.strip().replace(" ", "_")
     e = None
     if a.has_entry_by_title(norm):
@@ -98,7 +112,59 @@ def _article_entry(title: str):
     return e, html
 
 
-def _related(query: str):
+def _query(text: str):
+    """Correct libzim Query.
+
+    2026-08-28 incident: `libzim.Query(text)` does NOT raise — the binding's
+    Query cdef class has no string ctor (only set_query()), yet Cython's
+    generated tp_new silently accepts the arg and yields an EMPTY query
+    (0 results, no error, ~6 ms). That masked as "FTS is dead" for a day.
+    Always go through this helper.
+    """
+    return libzim.Query().set_query(text)
+
+
+_CJK_RE = re.compile(r"[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]")
+
+
+def _cjk_loose(query: str, st, limit=20):
+    """Loose CJK match without OR: one ranked query per overlapping 2-gram
+    (plus any non-CJK tokens), merged by co-occurrence. Needed because
+    libzim 9.x compiles queries with parse_query(str, FLAG_CJK_NGRAM) — the
+    2-arg overload DROPS FLAG_DEFAULT, so OR/AND/phrase syntax is silently
+    dead in this binding (libzim bug, unfixable from Python). A title string
+    AND-joined gram-by-gram finds nothing; merging per-gram ranked lists
+    approximates 'share the most terms' ranking."""
+    grams, seen = [], set()
+    for tok in query.split():
+        glist = [tok[i:i + 2] for i in range(len(tok) - 1)] or [tok] \
+            if _CJK_RE.search(tok) else [tok]
+        for g in glist:
+            if g not in seen:
+                seen.add(g)
+                grams.append(g)
+    grams = grams[:8]
+    best = {}  # title -> (n_grams_matched, best_position)
+    for g in grams:
+        try:
+            res = st["ft"].search(_query(g)).getResults(0, limit)
+        except RuntimeError:
+            continue
+        for pos, t in enumerate(res):
+            t = t.replace("_", " ").strip()
+            if not t:
+                continue
+            cur = best.get(t)
+            if cur is None or pos < cur[1]:
+                best[t] = (cur[0] + 1 if cur else 1, pos)
+    min_hits = 2 if len(grams) >= 3 else 1
+    ranked = [t for t, (hits, _p) in best.items() if hits >= min_hits]
+    ranked.sort(key=lambda t: (-best[t][0], best[t][1]))
+    return ranked
+
+
+def _related(query: str, lang: str = "en"):
+    st = _ARCHS[lang]
     seen = []
 
     def add(t):
@@ -106,12 +172,26 @@ def _related(query: str):
         if t and t not in seen:
             seen.append(t)
 
-    for t in _sugg.suggest(query).getResults(0, MAX_TITLES):
-        add(t)
-    if _ft is not None:
-        q = libzim.Query()
-        q.set_query(query)
-        for t in _ft.search(q).getResults(0, MAX_TITLES):
+    # FTS first: single-digit ms on a warm archive, while SuggestionSearcher
+    # can take ~0.7s on common words (seconds on cold drvfs reads). Suggest
+    # remains the fallback when FTS finds nothing (or the index is absent).
+    if st["ft"] is not None:
+        # BUG (2026-08-28 incident): libzim.Query(str) does NOT raise — it
+        # silently creates an EMPTY query (binding has no string ctor; only
+        # set_query()). Always use Query().set_query(text).
+        # CJK: a guessed-title string is AND-joined gram by gram and usually
+        # finds nothing; fall back to the per-gram merge (OR syntax is dead
+        # in libzim 9.x — see _cjk_loose).
+        try:
+            for t in st["ft"].search(_query(query)).getResults(0, MAX_TITLES):
+                add(t)
+        except RuntimeError:
+            pass
+        if not seen and _CJK_RE.search(query):
+            for t in _cjk_loose(query, st, MAX_TITLES):
+                add(t)
+    if not seen:
+        for t in st["sugg"].suggest(query).getResults(0, MAX_TITLES):
             add(t)
     return seen[:MAX_TITLES]
 
@@ -127,10 +207,10 @@ def _convert(html: str) -> str:
     return c.handle(html)
 
 
-def _snippet(title: str, words):
+def _snippet(title: str, words, lang: str = "en"):
     """~220-char window around the first occurrence of a significant query
     word in the article body (longest words first)."""
-    a = archive()
+    a = archive(lang)
     e = None
     for cand in (title, title.replace(" ", "_")):
         if a.has_entry_by_title(cand):
@@ -154,21 +234,24 @@ def _snippet(title: str, words):
 
 
 @mcp.tool()
-def search(query: str, limit: int = 8) -> str:
+def search(query: str, limit: int = 8, lang: str = "en") -> str:
     """Search offline Wikipedia article text by keywords or phrase. Returns up
     to `limit` ranked article titles, each with a short snippet of the matching
-    text. Follow up with get(title) or get(title, section=...) to read a hit."""
-    archive()
+    text. Follow up with get(title) or get(title, section=...) to read a hit.
+    lang: 'en' (default) or 'zh' (Chinese wiki, if configured)."""
+    try:
+        archive(lang)
+    except ValueError as e:
+        return str(e)
+    st = _ARCHS[lang]
     if limit <= 0:
         limit = 8
     # libzim chokes on absurdly long queries; cap like the other ZIM servers
     query = query.strip()[:120]
     res = []
-    if _ft is not None:
-        q = libzim.Query()
-        q.set_query(query)
+    if st["ft"] is not None:
         try:
-            s = _ft.search(q)
+            s = st["ft"].search(_query(query))  # _query(): see _related
             # fetch a wider pool so the title-contains hoist below can see
             # candidates beyond the raw top-N
             res = [t.replace("_", " ") for t in s.getResults(0, max(limit * 5, 25))]
@@ -187,25 +270,31 @@ def search(query: str, limit: int = 8) -> str:
               [t for t in res if ql not in norm(t)]
         res = res[:limit]
     if not res:
-        res = [t.replace("_", " ") for t in _sugg.suggest(query.strip()).getResults(0, limit)]
+        res = [t.replace("_", " ") for t in st["sugg"].suggest(query.strip()).getResults(0, limit)]
     if not res:
         return f"No articles matched: {query}"
     words = [w for w in re.findall(r"[a-z0-9']+", query.lower()) if len(w) > 3]
-    return "\n".join(f"{i}. {t}" + _snippet(t, words) for i, t in enumerate(res, 1))
+    words += [ch for ch in query if "\u4e00" <= ch <= "\u9fff"]
+    return "\n".join(f"{i}. {t}" + _snippet(t, words, lang) for i, t in enumerate(res, 1))
 
 
 @mcp.tool()
-def get(title: str, section: str = "", full: bool = False) -> str:
+def get(title: str, section: str = "", full: bool = False, lang: str = "en") -> str:
     """Read an offline Wikipedia article, or one section of it. Pass an exact
     article title (e.g. "American bison"). Long articles return their lead
     (intro) plus a section list by default — answer from the lead when it
     suffices, else pass section="Section Name" for one section or full=True
     for the whole article. If no article with that title exists, the tool
     returns similar article titles — pick one and call get again. If the
-    section is not found, the tool lists the article's sections."""
-    found = _article_entry(title)
+    section is not found, the tool lists the article's sections.
+    lang: 'en' (default) or 'zh' (Chinese wiki, if configured)."""
+    try:
+        archive(lang)
+    except ValueError as e:
+        return str(e)
+    found = _article_entry(title, lang)
     if found is None:
-        related = _related(title)
+        related = _related(title, lang)
         if related:
             return "Article not found. Related articles:\n" + "\n".join(related)
         return f"Article not found, and no related articles for: {title}"
