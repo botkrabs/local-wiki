@@ -1,0 +1,14 @@
+# local_wiki dependencies — install into the Python >= 3.10 you will run
+# server.py with. On PEP-668 "externally managed" systems (Ubuntu/Debian) use
+# a venv or `pip install --break-system-packages -r requirements.txt`.
+#
+# Unpinned deliberately: these are four stable, single-purpose packages.
+# Validated combination (2026-08-28, Python 3.12):
+#   libzim 3.12.0 (PyPI wheel — the validated path, not the system C lib),
+#   mcp 2.1.1, html2text 2025.4.15, uvicorn 0.52.4.
+# After installing, run `python3 eval/run_eval.py` — any libzim/mcp version
+# drift that changes behavior shows up there.
+libzim
+mcp
+html2text
+uvicorn

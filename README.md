@@ -48,10 +48,12 @@ once, and every article exists.
 Do not start with the 52 GB file. Wire the whole chain against the tiny
 test subset first, then swap in the real archive:
 
-1. **Code + deps.** `git clone https://github.com/botkrabs/local-wiki`. Needs
-   a Python with the `mcp` SDK (speaking spec 2025-03-26) and `libzim`
-   installed — the two finicky bits are picking a Python/libzim combination
-   that works (this deployment: system Python 3.12 + distro libzim).
+1. **Code + deps.** `git clone https://github.com/botkrabs/local-wiki`, then
+   `pip install -r requirements.txt` into a Python ≥ 3.10 (four packages:
+   libzim, mcp, html2text, uvicorn — all wheel-available; PEP-668 distros:
+   venv or `--break-system-packages`). The finicky bit is making sure the
+   Python you installed into is the one you run `server.py` with (verify:
+   `python3 -c "import libzim, mcp"`).
 2. **Test ZIM.** The `wikipedia.zim` in the repo is a symlink into
    `wiki_zim/`, not a ZIM. Grab the ~318 MB test subset from
    <https://download.kiwix.org/zim/wikipedia/> (`wikipedia_en_100`) and save
@@ -156,7 +158,8 @@ Typical client config shape (client-specific, URL + streamable-HTTP transport):
 
 | Path | Purpose |
 |---|---|
-| `server.py` | the MCP server (needs system python 3.12: libzim, mcp, html2text, uvicorn) |
+| `server.py` | the MCP server (deps in `requirements.txt`) |
+| `requirements.txt` | 4 pip deps (libzim, mcp, html2text, uvicorn) |
 | `wikipedia.zim` | relative symlink → `wiki_zim/wikipedia_nopic.zim` (52.7 GB on this box; `wiki_zim/` itself is a symlink to `/mnt/shared/wiki_zim/`) |
 | `eval/` (`run_eval.py` + `eval_set.jsonl`) | 31-case regression suite (~5 s) |
 | `run.pid` | pid of the HTTP server (see gotcha #2) |
