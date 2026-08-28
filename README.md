@@ -169,7 +169,7 @@ curl -s -X POST http://127.0.0.1:3211/mcp -H 'Content-Type: application/json' \
 cd ~/.openclaw/workspace/local_wiki && \
   LOCAL_WIKI_ZIM=$PWD/wikipedia.zim /usr/bin/python3 run_eval.py
 ```
-Expect `24 passed, 0 failed, 3 informational`. Non-zero exit = regression. The
+Expect `28 passed, 0 failed, 3 informational`. Non-zero exit = regression. The
 3 `note`-marked cases are known libzim ranking limits — informational by design.
 
 **ZIM refresh (manual, no schedule):**
