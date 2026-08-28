@@ -32,8 +32,6 @@ ZH_PATH = os.environ.get("LOCAL_WIKI_ZIM_ZH", "")
 if not ZH_PATH:
     _here = os.path.dirname(os.path.abspath(__file__))
     _cands = sorted(glob.glob(os.path.join(_here, "wiki_zim", "wikipedia_zh_all_nopic_*.zim")))
-    # legacy deployment location (pre 0.1.2):
-    _cands += sorted(glob.glob("/mnt/shared/wiki_zim/wikipedia_zh_all_nopic_*.zim"))
     if _cands:
         ZH_PATH = _cands[-1]
 _ZIM_PATHS = {"en": ZIM_PATH}

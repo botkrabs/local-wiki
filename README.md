@@ -16,8 +16,8 @@ I run the refresh script by hand.
 
 Since 0.1.0 (2026-08-28) it also serves the **full Chinese Wikipedia**
 (13.7 GB, `wikipedia_zh_all_nopic_2026-07.zim`) behind the same two tools via
-`lang="zh"` — auto-detected from the project's `wiki_zim/` dir
-   (legacy: `/mnt/shared/wiki_zim/`), no config needed.
+`lang="zh"` — auto-detected from the project's `wiki_zim/` dir, no
+   config needed.
 
 Initial word search concept was inspired by [gbkorr/ratsearch](https://github.com/gbkorr/ratsearch).
 
@@ -169,7 +169,7 @@ Typical client config shape (client-specific, URL + streamable-HTTP transport):
 
 `LOCAL_WIKI_ZIM` (path; default `./wikipedia.zim`) · `LOCAL_WIKI_ZIM_ZH`
 (optional; default = auto-detect newest `wikipedia_zh_all_nopic_*.zim` in
-`./wiki_zim/`, then legacy `/mnt/shared/wiki_zim/`) · `LOCAL_WIKI_MAX_CHARS` (65535) ·
+`./wiki_zim/`) · `LOCAL_WIKI_MAX_CHARS` (65535) ·
 `LOCAL_WIKI_MAX_TITLES` (20) · `LOCAL_WIKI_LEAD_MAX` (8000 — lead-mode
 threshold) · `LOCAL_WIKI_HTTP_PORT` (HTTP mode).
 
