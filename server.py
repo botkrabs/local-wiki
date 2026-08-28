@@ -37,6 +37,14 @@ if not ZH_PATH:
 _ZIM_PATHS = {"en": ZIM_PATH}
 if ZH_PATH:
     _ZIM_PATHS["zh"] = ZH_PATH
+
+# advertised in the MCP tool descriptions so the client sees what is actually
+# available (and where) — a missing ZIM shows up as MISSING instead of failing
+# on first call
+_ZIM_NOTE = ("\n\nAvailable archives: " + "; ".join(
+    (f"{c}={os.path.abspath(p)} ({os.path.getsize(p) / 1e9:.1f} GB)"
+     if os.path.exists(p) else f"{c}=MISSING ({p})")
+    for c, p in sorted(_ZIM_PATHS.items())))
 MAX_CHARS = int(os.environ.get("LOCAL_WIKI_MAX_CHARS", "65535"))
 MAX_TITLES = int(os.environ.get("LOCAL_WIKI_MAX_TITLES", "20"))
 # articles longer than this return their lead (intro) by default; pass
@@ -234,7 +242,6 @@ def _snippet(title: str, words, lang: str = "en"):
     return "\n   " + text[:220].strip()
 
 
-@mcp.tool()
 def search(query: str, limit: int = 8, lang: str = "en") -> str:
     """Search offline Wikipedia article text by keywords or phrase. Returns up
     to `limit` ranked article titles, each with a short snippet of the matching
@@ -279,7 +286,6 @@ def search(query: str, limit: int = 8, lang: str = "en") -> str:
     return "\n".join(f"{i}. {t}" + _snippet(t, words, lang) for i, t in enumerate(res, 1))
 
 
-@mcp.tool()
 def get(title: str, section: str = "", full: bool = False, lang: str = "en") -> str:
     """Read an offline Wikipedia article, or one section of it. Pass an exact
     article title (e.g. "American bison"). Long articles return their lead
@@ -335,6 +341,12 @@ def get(title: str, section: str = "", full: bool = False, lang: str = "en") -> 
                 f"section=\"Name\" to fetch a section only. "
                 f"Sections: " + ", ".join(heads) + "]")
     return "Article:\n" + art_title + "\n" + text
+
+
+# register the tools with their docstrings + the live archive list
+for _fn in (search, get):
+    _fn.__doc__ = (_fn.__doc__ or "") + _ZIM_NOTE
+    mcp.tool()(_fn)
 
 
 if __name__ == "__main__":
