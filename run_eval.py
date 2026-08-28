@@ -4,7 +4,8 @@
 Deterministic tool-level checks (no LLM): loads eval_set.jsonl and calls the
 `get` / `search` functions directly, scoring each against its `check`.
 
-Run:  /usr/bin/python3 run_eval.py [--set eval_set.jsonl]
+Run:  python3 run_eval.py [--set eval_set.jsonl]
+      (with the interpreter that has libzim — it loads server.py in-process)
 
 Tier-2 (model-level: does the LLM route to the right tool / read the right
 section) is deliberately NOT here — it needs the agent in the loop and is

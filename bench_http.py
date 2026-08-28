@@ -1,6 +1,7 @@
-import json, time, urllib.request
+import json, os, time, urllib.request
 
-BASE = "http://127.0.0.1:3211/mcp"
+# same env var the server itself uses (server.py LOCAL_WIKI_HTTP_PORT)
+BASE = "http://127.0.0.1:%s/mcp" % os.environ.get("LOCAL_WIKI_HTTP_PORT", "3211")
 HDRS = {"Content-Type": "application/json",
         "Accept": "application/json, text/event-stream"}
 
