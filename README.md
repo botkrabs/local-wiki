@@ -42,6 +42,31 @@ isn't in it comes back as "not found" (with related titles), and `search`
 can only rank what's inside. The trade this project makes is: pay the 52 GB
 once, and every article exists.
 
+## Staged setup (install path)
+
+Do not start with the 52 GB file. Wire the whole chain against the tiny
+test subset first, then swap in the real archive:
+
+1. **Code + deps.** `git clone https://github.com/botkrabs/local-wiki`. Needs
+   a Python with the `mcp` SDK (speaking spec 2025-03-26) and `libzim`
+   installed — the two finicky bits are picking a Python/libzim combination
+   that works (this deployment: system Python 3.12 + distro libzim).
+2. **Test ZIM.** Note: the `wikipedia.zim` in this repo is a 40-byte pointer,
+   not a ZIM — replace it. Grab the ~318 MB test subset from
+   <https://download.kiwix.org/zim/wikipedia/> (`wikipedia_en_100`) and save
+   it as `./wikipedia.zim` next to `server.py`.
+3. **Verify the chain.** Run `LOCAL_WIKI_ZIM=$PWD/wikipedia.zim python3 server.py`
+   (stdio, or with `LOCAL_WIKI_HTTP_PORT=…` for HTTP mode) and confirm the
+   server answers over the wire (`tools/list` recipe in **Operations**). A
+   `get`/`search` may miss — the subset is tiny; the point is that the
+   request round-trips cleanly.
+4. **Full archive.** `/path/to/python refresh_zim.py --dry-run` (resolves the
+   newest kiwix build, checks disk space) then run it for real:
+   download → libzim verify → atomic swap into `./wikipedia.zim` (one `.bak`
+   of the previous file is kept). Any smaller build works too, via `--url`.
+5. **Restart + re-verify.** Restart the server and run the wire check again.
+   The first read after a swap is slow (lazy index build).
+
 ## Tools
 
 - `get(title, section="", full=False, lang="en")` — exact title → article text. Long
