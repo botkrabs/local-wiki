@@ -159,7 +159,6 @@ Typical client config shape (client-specific, URL + streamable-HTTP transport):
 | `server.py` | the MCP server (needs system python 3.12: libzim, mcp, html2text, uvicorn) |
 | `wikipedia.zim` | relative symlink → `wiki_zim/wikipedia_nopic.zim` (52.7 GB on this box; `wiki_zim/` itself is a symlink to `/mnt/shared/wiki_zim/`) |
 | `run_eval.py` + `eval_set.jsonl` | 31-case regression suite (~5 s) |
-| `bench_http.py` | e2e latency check over the live HTTP endpoint |
 | `run.pid` | pid of the HTTP server (see gotcha #2) |
 | `~/.bashrc` (bottom block) | autostart: if `:3211` not listening, start the server |
 | `/tmp/local-wiki-mcp.log` | server log (HTTP instance) |
@@ -256,7 +255,8 @@ read after a swap is slow (lazy index build). Update the snapshot date in
   (`libzim.Query(str)` silently builds an empty query — `_query()` helper);
   Chinese Wikipedia (`lang="zh"`, auto-detected); CJK miss-path per-gram merge
   (libzim 9.x drops `FLAG_DEFAULT` — OR/AND/phrase syntax is dead); first git
-  tag. Full story: `INCIDENT_2026-08-28.md`.
+  tag. (The full incident write-up is kept locally on the original
+  deployment, not in the repo.)
 - 2026-08-28 (0.1.1): CORS middleware so browser-based MCP clients can connect.
 - 2026-08-28 (main): paths unhardcoded — data dir `wiki_zim/` under the
   project, relative `wikipedia.zim` symlink, verify via the running

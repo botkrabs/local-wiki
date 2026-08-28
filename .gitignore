@@ -15,5 +15,7 @@ __pycache__/
 # manual ZIM swaps keep one .bak of the previous archive
 *.bak
 
-# kept locally (untracked): single-purpose 50 GB English updater, not shipped
-refresh_zim.py
+# kept locally (untracked), not shipped
+refresh_zim.py    # single-purpose 50 GB English updater
+bench_http.py     # e2e latency probe (README curl wire-check covers it)
+INCIDENT_2026-08-28.md  # incident write-up of the original deployment
