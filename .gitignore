@@ -1,6 +1,9 @@
-# ZIM data (wikipedia_en_100.zim is a 333 MB test subset)
+# ZIM data — lives in <project>/wiki_zim/ (on the original deployment that
+# dir is a symlink to /mnt/shared/wiki_zim/; big files stay off the WSL root)
 *.zim
-# ...but commit the wikipedia.zim symlink (40-byte pointer to /mnt/shared/wiki_zim/, machine-specific layout)
+wiki_zim
+# ...but commit the wikipedia.zim symlink (relative pointer into wiki_zim/;
+# resolves once a ZIM lands at wiki_zim/wikipedia_nopic.zim)
 !wikipedia.zim
 
 # runtime

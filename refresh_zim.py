@@ -10,15 +10,20 @@ hand whenever a fresher snapshot is wanted:
     /usr/bin/python3 refresh_zim.py --dry-run  # resolve + size check only
 
 Layout:
-  data dir:  /mnt/shared/wiki_zim/
+  data dir:  <project>/wiki_zim/   (override: LOCAL_WIKI_DATA_DIR)
     wikipedia_nopic.zim       <- stable name the workspace symlink points to
     wikipedia_nopic.zim.bak   <- previous good copy (one generation)
-  server:    ~/.openclaw/workspace/local_wiki/ (env LOCAL_WIKI_ZIM)
+  server:    <project>/ (env LOCAL_WIKI_ZIM, default ./wikipedia.zim)
 
 The running server keeps serving the OLD data (its mmap holds the old inode)
 until you restart it — the swap itself is non-disruptive.
 
-Verify uses the SYSTEM python (3.12, has libzim), not the shell default.
+Verify uses the interpreter RUNNING this script — launch it with a python
+that has libzim (e.g. /usr/bin/python3 on this box; bare `python3` may not).
+
+NOTE: big ZIMs belong on a big disk. On the original deployment set
+LOCAL_WIKI_DATA_DIR=/mnt/shared/wiki_zim so the multi-GB files stay off the
+WSL root.
 """
 import argparse
 import datetime
@@ -29,13 +34,15 @@ import subprocess
 import sys
 import time
 
-DATA_DIR = "/mnt/shared/wiki_zim"
+_HERE = os.path.dirname(os.path.abspath(__file__))
+DATA_DIR = os.environ.get("LOCAL_WIKI_DATA_DIR", os.path.join(_HERE, "wiki_zim"))
+os.makedirs(DATA_DIR, exist_ok=True)
 STABLE = os.path.join(DATA_DIR, "wikipedia_nopic.zim")
 BACKUP = STABLE + ".bak"
 TMP = os.path.join(DATA_DIR, "wikipedia_nopic.dl")
 LOCK = os.path.join(DATA_DIR, "refresh.lock")
 LISTING_URL = "https://download.kiwix.org/zim/wikipedia/"
-VERIFY_PY = "/usr/bin/python3"
+VERIFY_PY = sys.executable  # the interpreter running this script (needs libzim)
 MIN_BYTES = 10 * 1024**3          # full EN nopic is tens of GB; refuse small files
 AGENTS_MD = os.path.expanduser("~/.pi/agent/AGENTS.md")
 

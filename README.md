@@ -16,7 +16,8 @@ I run the refresh script by hand.
 
 Since 0.1.0 (2026-08-28) it also serves the **full Chinese Wikipedia**
 (13.7 GB, `wikipedia_zh_all_nopic_2026-07.zim`) behind the same two tools via
-`lang="zh"` — auto-detected from `/mnt/shared/wiki_zim/`, no config needed.
+`lang="zh"` — auto-detected from the project's `wiki_zim/` dir
+   (legacy: `/mnt/shared/wiki_zim/`), no config needed.
 
 Initial word search concept was inspired by [gbkorr/ratsearch](https://github.com/gbkorr/ratsearch).
 
@@ -51,19 +52,23 @@ test subset first, then swap in the real archive:
    a Python with the `mcp` SDK (speaking spec 2025-03-26) and `libzim`
    installed — the two finicky bits are picking a Python/libzim combination
    that works (this deployment: system Python 3.12 + distro libzim).
-2. **Test ZIM.** Note: the `wikipedia.zim` in this repo is a 40-byte pointer,
-   not a ZIM — replace it. Grab the ~318 MB test subset from
+2. **Test ZIM.** The `wikipedia.zim` in the repo is a symlink into
+   `wiki_zim/`, not a ZIM. Grab the ~318 MB test subset from
    <https://download.kiwix.org/zim/wikipedia/> (`wikipedia_en_100`) and save
-   it as `./wikipedia.zim` next to `server.py`.
+   it as `./wiki_zim/wikipedia_nopic.zim` — the symlink then resolves on its
+   own (no env vars needed).
 3. **Verify the chain.** Run `LOCAL_WIKI_ZIM=$PWD/wikipedia.zim python3 server.py`
    (stdio, or with `LOCAL_WIKI_HTTP_PORT=…` for HTTP mode) and confirm the
    server answers over the wire (`tools/list` recipe in **Operations**). A
    `get`/`search` may miss — the subset is tiny; the point is that the
    request round-trips cleanly.
-4. **Full archive.** `/path/to/python refresh_zim.py --dry-run` (resolves the
-   newest kiwix build, checks disk space) then run it for real:
-   download → libzim verify → atomic swap into `./wikipedia.zim` (one `.bak`
-   of the previous file is kept). Any smaller build works too, via `--url`.
+4. **Full archive.** `python3 refresh_zim.py --dry-run` (resolves the newest
+   kiwix build, checks disk space) then run it for real — use the interpreter
+   with libzim:
+   download → libzim verify → atomic swap into `wiki_zim/wikipedia_nopic.zim`
+   (one `.bak` of the previous file is kept). Any smaller build works too,
+   via `--url`. Big files want a big disk: point `LOCAL_WIKI_DATA_DIR` at one
+   if `wiki_zim/` sits on your root partition.
 5. **Restart + re-verify.** Restart the server and run the wire check again.
    The first read after a swap is slow (lazy index build).
 
@@ -151,7 +156,7 @@ Typical client config shape (client-specific, URL + streamable-HTTP transport):
 | Path | Purpose |
 |---|---|
 | `server.py` | the MCP server (needs system python 3.12: libzim, mcp, html2text, uvicorn) |
-| `wikipedia.zim` | symlink → `/mnt/shared/wiki_zim/wikipedia_nopic.zim` (52.7 GB) |
+| `wikipedia.zim` | relative symlink → `wiki_zim/wikipedia_nopic.zim` (52.7 GB on this box; `wiki_zim/` itself is a symlink to `/mnt/shared/wiki_zim/`) |
 | `refresh_zim.py` | manual ZIM refresh (see Operations) |
 | `run_eval.py` + `eval_set.jsonl` | 31-case regression suite (~5 s) |
 | `bench_http.py` | e2e latency check over the live HTTP endpoint |
@@ -164,9 +169,12 @@ Typical client config shape (client-specific, URL + streamable-HTTP transport):
 
 `LOCAL_WIKI_ZIM` (path; default `./wikipedia.zim`) · `LOCAL_WIKI_ZIM_ZH`
 (optional; default = auto-detect newest `wikipedia_zh_all_nopic_*.zim` in
-`/mnt/shared/wiki_zim/`) · `LOCAL_WIKI_MAX_CHARS` (65535) ·
+`./wiki_zim/`, then legacy `/mnt/shared/wiki_zim/`) · `LOCAL_WIKI_MAX_CHARS` (65535) ·
 `LOCAL_WIKI_MAX_TITLES` (20) · `LOCAL_WIKI_LEAD_MAX` (8000 — lead-mode
 threshold) · `LOCAL_WIKI_HTTP_PORT` (HTTP mode).
+
+`refresh_zim.py` also reads `LOCAL_WIKI_DATA_DIR` (default `./wiki_zim/`) —
+where the downloaded/verified/swapped archive lives.
 
 ## Operations
 
@@ -230,8 +238,9 @@ on disk). First read after a swap is slow (lazy index build).
    into failing the eval.
 7. **Snapshot staleness**: the ZIM is frozen at download date (2026-08-27).
    Anything newer needs `web_search` (local SearXNG).
-8. The ZIM lives on `/mnt/shared` (Windows-side share, root-owned dir) — 50 GB
-   downloads take a while; `refresh_zim.py` is resumable.
+8. On this deployment the ZIM lives on `/mnt/shared` (Windows-side share,
+   root-owned dir) via the `wiki_zim/` symlink — 50 GB downloads take a while;
+   `refresh_zim.py` is resumable.
 
 ## History
 
