@@ -11,23 +11,27 @@ A Python with these packages: `libzim`, `mcp`, `html2text`, `uvicorn`
 If the shell's `python3` is a different interpreter (e.g. Linuxbrew),
 invoke the system one explicitly (`/usr/bin/python3`).
 
-## Download a ZIM
+## Download a ZIM (manual)
 
-Full English Wikipedia, no images: the newest
-`wikipedia_en_all_nopic_YYYY-MM.zim` (~49 GB) from
-<https://download.kiwix.org/zim/wikipedia/>.
+No updater script — download and replace by hand; any kiwix build works
+(full English, no images = `wikipedia_en_all_nopic_YYYY-MM.zim`, ~49 GB;
+listing: <https://download.kiwix.org/zim/wikipedia/>). The file belongs at
+`wiki_zim/wikipedia_nopic.zim` (the committed `wikipedia.zim` symlink
+resolves there).
 
-The bundled updater does it end-to-end (resolves the newest build, checks
-free space, resumable download, libzim verification, atomic swap, keeps
-one `.bak` of the previous file):
+    # 1. download (resumable)
+    curl -C - -L -o wiki_zim/wikipedia_nopic.zim.new '<URL>'
+    # 2. VERIFY before swapping — a truncated 50 GB file is otherwise
+    #    indistinguishable until first use
+    /usr/bin/python3 -c "import libzim; a=libzim.reader.Archive('wiki_zim/wikipedia_nopic.zim.new'); print('articles:', a.count_articles)"
+    # 3. swap, keeping the previous archive as .bak (rollback)
+    mv wiki_zim/wikipedia_nopic.zim wiki_zim/wikipedia_nopic.zim.bak 2>/dev/null || true
+    mv wiki_zim/wikipedia_nopic.zim.new wiki_zim/wikipedia_nopic.zim
+    # 4. restart the server — the running instance keeps the old snapshot
+    #    in mmap until restart; first read after a swap is slow (lazy index)
 
-    /usr/bin/python3 refresh_zim.py            # newest build
-    /usr/bin/python3 refresh_zim.py --dry-run  # resolve + size check only
-    /usr/bin/python3 refresh_zim.py --url URL  # explicit file/URL
-
-It prints a restart hint when done — the running server keeps the old
-snapshot in mmap until you restart it. Point the `wikipedia.zim` symlink
-at the file the script installed (see `DATA_DIR` in `refresh_zim.py`).
+Verify with the interpreter that has libzim, and check disk space first —
+the full build is tens of GB.
 
 ## Operation
 

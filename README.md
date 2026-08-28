@@ -24,10 +24,10 @@ Initial word search concept was inspired by [gbkorr/ratsearch](https://github.co
 ### A word on size
 
 The full no-images build is the big one — ~49 GB to download, ~52 GB on
-disk — and that's what `refresh_zim.py` installs by default. If that's too
-much for your machine, kiwix hosts smaller English ZIMs that this server
-takes just as well: download any of them and point `LOCAL_WIKI_ZIM` at it
-(or feed the URL to `refresh_zim.py --url`). Options as of the August 2026
+disk — and that's the default target in this repo. If that's too much for
+your machine, kiwix hosts smaller English ZIMs that this server takes just
+as well: download any of them into `wiki_zim/` and point `LOCAL_WIKI_ZIM`
+at it. Options as of the August 2026
 listing (check <https://download.kiwix.org/zim/wikipedia/> for current):
 
 | ZIM | Size | What it is |
@@ -62,13 +62,14 @@ test subset first, then swap in the real archive:
    server answers over the wire (`tools/list` recipe in **Operations**). A
    `get`/`search` may miss — the subset is tiny; the point is that the
    request round-trips cleanly.
-4. **Full archive.** `python3 refresh_zim.py --dry-run` (resolves the newest
-   kiwix build, checks disk space) then run it for real — use the interpreter
-   with libzim:
-   download → libzim verify → atomic swap into `wiki_zim/wikipedia_nopic.zim`
-   (one `.bak` of the previous file is kept). Any smaller build works too,
-   via `--url`. Big files want a big disk: point `LOCAL_WIKI_DATA_DIR` at one
-   if `wiki_zim/` sits on your root partition.
+4. **Full archive.** Manual (there is no updater script — deliberately, it
+   only fit one flow): pick a bigger build from the same kiwix listing,
+   download it resumably (`curl -C - -L -o …`), **verify it opens with
+   libzim first** (recipe in **Operations**), then replace
+   `wiki_zim/wikipedia_nopic.zim` with it, keeping the old file as `.bak`
+   for rollback. Big files want a big disk — on this deployment `wiki_zim/`
+   is a symlink to a Windows-side share; otherwise keep it on your largest
+   partition.
 5. **Restart + re-verify.** Restart the server and run the wire check again.
    The first read after a swap is slow (lazy index build).
 
@@ -157,7 +158,6 @@ Typical client config shape (client-specific, URL + streamable-HTTP transport):
 |---|---|
 | `server.py` | the MCP server (needs system python 3.12: libzim, mcp, html2text, uvicorn) |
 | `wikipedia.zim` | relative symlink → `wiki_zim/wikipedia_nopic.zim` (52.7 GB on this box; `wiki_zim/` itself is a symlink to `/mnt/shared/wiki_zim/`) |
-| `refresh_zim.py` | manual ZIM refresh (see Operations) |
 | `run_eval.py` + `eval_set.jsonl` | 31-case regression suite (~5 s) |
 | `bench_http.py` | e2e latency check over the live HTTP endpoint |
 | `run.pid` | pid of the HTTP server (see gotcha #2) |
@@ -172,9 +172,6 @@ Typical client config shape (client-specific, URL + streamable-HTTP transport):
 `./wiki_zim/`) · `LOCAL_WIKI_MAX_CHARS` (65535) ·
 `LOCAL_WIKI_MAX_TITLES` (20) · `LOCAL_WIKI_LEAD_MAX` (8000 — lead-mode
 threshold) · `LOCAL_WIKI_HTTP_PORT` (HTTP mode).
-
-`refresh_zim.py` also reads `LOCAL_WIKI_DATA_DIR` (default `./wiki_zim/`) —
-where the downloaded/verified/swapped archive lives.
 
 ## Operations
 
@@ -205,15 +202,21 @@ cd ~/.openclaw/workspace/local_wiki && \
 Expect `28 passed, 0 failed, 3 informational`. Non-zero exit = regression. The
 3 `note`-marked cases are known libzim ranking limits — informational by design.
 
-**ZIM refresh (manual, no schedule):**
+**ZIM refresh (manual, no schedule — quarterly at most):**
+There is no updater script; swap by hand. Any kiwix build works; the full
+English no-images one is `wikipedia_en_all_nopic_YYYY-MM.zim` (~49 GB;
+newest known at time of writing: `2026-06`, 49.1 GB listed / 52.7 GB on
+disk). Check disk space first.
 ```bash
-/usr/bin/python3 refresh_zim.py --dry-run   # resolve newest kiwix build, check space
-/usr/bin/python3 refresh_zim.py             # download → libzim verify → atomic swap
+curl -C - -L -o wiki_zim/wikipedia_nopic.zim.new '<URL from download.kiwix.org>'   # resumable
+/usr/bin/python3 -c "import libzim; a=libzim.reader.Archive('wiki_zim/wikipedia_nopic.zim.new'); print('articles:', a.count_articles)"
+mv wiki_zim/wikipedia_nopic.zim wiki_zim/wikipedia_nopic.zim.bak 2>/dev/null || true   # keep previous
+curl -s -X POST http://127.0.0.1:3211/mcp >/dev/null && echo up   # server still on old snapshot
 ```
-Keeps one `.bak` of the previous archive, updates the snapshot date in
-`~/.pi/agent/AGENTS.md`, and prints a restart reminder. Newest build known at
-time of writing: `wikipedia_en_all_nopic_2026-06.zim` (49.1 GB listed / 52.7 GB
-on disk). First read after a swap is slow (lazy index build).
+then `mv wiki_zim/wikipedia_nopic.zim.new wiki_zim/wikipedia_nopic.zim` and
+restart the server (it keeps the old snapshot in mmap until restart). First
+read after a swap is slow (lazy index build). Update the snapshot date in
+`~/.pi/agent/AGENTS.md`.
 
 ## Gotchas
 
@@ -239,8 +242,10 @@ on disk). First read after a swap is slow (lazy index build).
 7. **Snapshot staleness**: the ZIM is frozen at download date (2026-08-27).
    Anything newer needs `web_search` (local SearXNG).
 8. On this deployment the ZIM lives on `/mnt/shared` (Windows-side share,
-   root-owned dir) via the `wiki_zim/` symlink — 50 GB downloads take a while;
-   `refresh_zim.py` is resumable.
+   root-owned dir) via the `wiki_zim/` symlink — 50 GB downloads take a
+   while; use `curl -C -` so they're resumable, and verify with libzim
+   before swapping (a truncated file is otherwise indistinguishable until
+   first use).
 
 ## History
 
@@ -253,3 +258,7 @@ on disk). First read after a swap is slow (lazy index build).
   (libzim 9.x drops `FLAG_DEFAULT` — OR/AND/phrase syntax is dead); first git
   tag. Full story: `INCIDENT_2026-08-28.md`.
 - 2026-08-28 (0.1.1): CORS middleware so browser-based MCP clients can connect.
+- 2026-08-28 (main): paths unhardcoded — data dir `wiki_zim/` under the
+  project, relative `wikipedia.zim` symlink, verify via the running
+  interpreter; `refresh_zim.py` removed (single-purpose: only the 50 GB
+  English flow) in favor of the manual swap recipe in **Operations**.

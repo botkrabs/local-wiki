@@ -12,5 +12,8 @@ server.log
 __pycache__/
 *.pyc
 
-# refresh_zim.py keeps one .bak of the previous ZIM
+# manual ZIM swaps keep one .bak of the previous archive
 *.bak
+
+# kept locally (untracked): single-purpose 50 GB English updater, not shipped
+refresh_zim.py
