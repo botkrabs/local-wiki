@@ -340,11 +340,27 @@ if __name__ == "__main__":
     import asyncio
     http_port = os.environ.get("LOCAL_WIKI_HTTP_PORT")
     if http_port:
-        asyncio.run(mcp.run_streamable_http_async(
-            host="0.0.0.0",
-            port=int(http_port),
+        # Build the Starlette app ourselves (same args as run_streamable_http_async)
+        # so we can wrap it in CORS: browser-based MCP clients (e.g. the llama.cpp
+        # web UI on :8090) connect cross-origin, and without Access-Control-*
+        # headers the browser kills the handshake with "Failed to fetch" before
+        # the request ever reaches us. Non-browser clients send no Origin header
+        # and are unaffected. starlette is already an mcp dependency.
+        import uvicorn
+        from starlette.middleware.cors import CORSMiddleware
+
+        app = mcp.streamable_http_app(
             streamable_http_path="/mcp",
             stateless_http=True,
-        ))
+            host="0.0.0.0",
+        )
+        app = CORSMiddleware(
+            app,
+            allow_origins=["*"],
+            allow_methods=["*"],
+            allow_headers=["*"],
+            expose_headers=["mcp-session-id"],
+        )
+        uvicorn.run(app, host="0.0.0.0", port=int(http_port), log_level="info")
     else:
         asyncio.run(mcp.run_stdio_async())
