@@ -41,8 +41,8 @@ if ZH_PATH:
 # advertised in the MCP tool descriptions so the client sees what is actually
 # available (and where) — a missing ZIM shows up as MISSING instead of failing
 # on first call
-_ZIM_NOTE = ("\n\nAvailable archives: " + "; ".join(
-    (f"{c} ({os.path.getsize(p) / 1e9:.1f} GB)"  # paths omitted: no local layout in tool metadata
+_ZIM_NOTE = ("\n\nAvailable: " + ", ".join(
+    (f"{c}"  # code+availability only — no paths/sizes in tool metadata
      if os.path.exists(p) else f"{c}=MISSING")
     for c, p in sorted(_ZIM_PATHS.items())))
 MAX_CHARS = int(os.environ.get("LOCAL_WIKI_MAX_CHARS", "65535"))
@@ -243,17 +243,14 @@ def _snippet(title: str, words, lang: str = "en"):
 
 
 def search(query: str, limit: int = 8, lang: str = "en") -> str:
-    """Search offline Wikipedia full-text by keywords or phrase. Returns up to
-    `limit` ranked article titles, each with a short matching snippet; feed a
-    title to get(title) to read it.
-    lang: 'en' (default) or 'zh' (Chinese Wikipedia). Pick the archive that
-    matches the query language; for Chinese-language topics zh is usually the
-    fuller article. Never mix: a zh phrase against the en archive (or vice
-    versa) finds nothing. Zero hits: retry once with a shorter or more
-    specific phrase; two empty searches is strong evidence the article does
-    not exist (absence of article is not absence of fact).
-    Content is frozen at the archive snapshot (2026) — treat as reference,
-    not as current events."""
+    """Search offline Wikipedia (full-text) by keyword or phrase. Returns up
+    to `limit` ranked titles with matching snippets; feed a title to get().
+    lang: 'en' (default) or 'zh' — match the archive to the query language;
+    for zh topics the zh article is usually fuller. Never mix languages: a
+    zh phrase against the en archive (or vice versa) finds nothing.
+    No hits: retry once, shorter or more specific; two empty searches is
+    strong evidence no such article exists.
+    Frozen 2026 snapshot — reference, not current events."""
     try:
         archive(lang)
     except ValueError as e:
@@ -294,16 +291,13 @@ def search(query: str, limit: int = 8, lang: str = "en") -> str:
 
 
 def get(title: str, section: str = "", full: bool = False, lang: str = "en") -> str:
-    """Read an offline Wikipedia article by exact title (e.g. "American
-    bison"); use search first if you do not know the exact title.
-    Long articles return the lead (intro) plus a section list by default —
-    answer from the lead when it suffices; pass section="Section Name" for
-    one section, or full=True for the whole article. A wrong section name
-    returns the full section list to pick from.
-    lang: 'en' (default) or 'zh' (Chinese Wikipedia) — same archive rule as
-    search; titles from a zh search go back with lang="zh".
-    If the title is not found, the tool lists similar titles — pick the
-    semantically right one and call get again (one retry)."""
+    """Read a Wikipedia article by exact title (unknown → search first).
+    Long articles return the lead (intro) + section list by default; answer
+    from the lead when it suffices, else section="Name" for one section or
+    full=True for all; a wrong section name returns the full section list.
+    lang: 'en' (default) or 'zh', as in search.
+    Title not found → similar titles are listed; pick the semantically
+    right one and retry once."""
     try:
         archive(lang)
     except ValueError as e:
