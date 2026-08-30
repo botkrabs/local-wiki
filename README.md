@@ -263,7 +263,7 @@ read after a swap is slow (lazy index build). Update the snapshot date in
 - 2026-08-28 (0.1.1): CORS middleware so browser-based MCP clients can connect.
 - 2026-08-30 (0.1.2): `requirements.txt` (libzim/mcp/html2text/uvicorn, validated versions);
   README install step now `pip -r`.
-- 2026-08-30 (0.2.0): MIT license (+ contact email); tool descriptions made dynamic —
+- 2026-08-30 (0.1.3): MIT license (+ contact email); tool descriptions made dynamic —
   advertise available ZIM archives (path + size, or MISSING) in both tools; two
   consolidation passes: self-contained agentic instruction text, no local paths in
   metadata, ~35% shorter.
