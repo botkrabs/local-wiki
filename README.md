@@ -261,6 +261,12 @@ read after a swap is slow (lazy index build). Update the snapshot date in
   tag. (The full incident write-up is kept locally on the original
   deployment, not in the repo.)
 - 2026-08-28 (0.1.1): CORS middleware so browser-based MCP clients can connect.
+- 2026-08-30 (0.1.2): `requirements.txt` (libzim/mcp/html2text/uvicorn, validated versions);
+  README install step now `pip -r`.
+- 2026-08-30 (0.2.0): MIT license (+ contact email); tool descriptions made dynamic —
+  advertise available ZIM archives (path + size, or MISSING) in both tools; two
+  consolidation passes: self-contained agentic instruction text, no local paths in
+  metadata, ~35% shorter.
 - 2026-08-28 (main): paths unhardcoded — data dir `wiki_zim/` under the
   project, relative `wikipedia.zim` symlink, verify via the running
   interpreter; `refresh_zim.py` removed (single-purpose: only the 50 GB
